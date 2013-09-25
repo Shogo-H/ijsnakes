@@ -10,7 +10,7 @@ import ij.plugin.frame.*;
 
 import java.lang.Math;
 
-public class My_snake implements PlugIn {
+public class My_snake2 implements PlugIn {
 	private ImagePlus impl_src = null;
 	private int[] inar_lap = null;
 	
@@ -30,13 +30,13 @@ public class My_snake implements PlugIn {
 		IJ.log("convolve");
 		impr_lap.convolve3x3(GAUSSIAN_KARNEL);
 		impr_lap.convolve3x3(LAPLACIAN_KARNEL);
-
+		
 		IJ.log("make imageplus for the imageProcessor");
 		ImageStack imst_lap = new ImageStack(impr_lap.getWidth(), impr_lap.getHeight());
 		imst_lap.addSlice("",impr_lap);
 		ImagePlus impl_lap = new ImagePlus("", imst_lap);
 		impl_lap.show();
-
+		
 		IJ.log("cast imageProcessor to float array");
 		inar_lap = (int[])impr_lap.getPixels();	//int is needed when the picture has RGB
 		
@@ -46,23 +46,55 @@ public class My_snake implements PlugIn {
 		int yPoly[] = {150, 100, 125, 225, 350};
 		p = new Polygon(xPoly, yPoly, xPoly.length);
 		Roi po_roi = new PolygonRoi(p, Roi.POLYGON);
-		impl_lap.setRoi(po_roi);
+		impl_src.setRoi(po_roi);
 
-		IJ.log("culcurate the vdot energy");
-		double E_vdot = 0.;	
-		for(int i=0; i<p.npoints-1; i++){
-			E_vdot += Math.sqrt(Math.pow(p.xpoints[i+1] - p.xpoints[i], 2) + Math.pow(p.ypoints[i+1] - p.ypoints[i], 2));
-		}
-		E_vdot += Math.sqrt(Math.pow(p.xpoints[0] - p.xpoints[p.npoints-1], 2) + Math.pow(p.ypoints[0] - p.ypoints[p.npoints-1], 2));
-		IJ.log("E_vdot = " + E_vdot);
-
-		IJ.log("culcurate the v2dot energy");
-		double E_v2dot = 0.;
-		
+		computeContourEnergy(p, impr_src);
 		
 		IJ.log("**** Finishing ****");
 	}
 
+	private double computeContourEnergy(Polygon p, ImageProcessor impr_src){
+		IJ.log("culcurate the rdot energy");
+		//sum of |P(t+1) - P(t)|
+		double E_rdot = 0.;	
+		for(int i=0; i<p.npoints-1; i++){
+			E_rdot += Math.sqrt(Math.pow(p.xpoints[i+1] - p.xpoints[i], 2) + Math.pow(p.ypoints[i+1] - p.ypoints[i], 2));
+		}
+		E_rdot += Math.sqrt(Math.pow(p.xpoints[0] - p.xpoints[p.npoints-1], 2) + Math.pow(p.ypoints[0] - p.ypoints[p.npoints-1], 2));
+		IJ.log("E_rdot = " + E_rdot);
 
+		IJ.log("culcurate the r2dot energy");
+		//sum of |{P(t+2)-P(t+1)} - {P(t+1)-P(t)}| = |P(t+2)-2*P(t+1)+P(t)|
+		double E_r2dot = 0.;
+		for(int i=0; i<p.npoints-2; i++){
+			E_r2dot += Math.sqrt(Math.pow(p.xpoints[i+2] - 2*p.xpoints[i+1] + p.xpoints[i], 2) + Math.pow(p.ypoints[i+2] - 2*p.ypoints[i+1] + p.ypoints[i], 2));
+		}
+		E_r2dot += Math.sqrt(Math.pow(p.xpoints[0] - 2*p.xpoints[p.npoints-1] + p.xpoints[p.npoints-2], 2) + Math.pow(p.ypoints[0] - 2*p.ypoints[p.npoints-1] + p.ypoints[p.npoints-2], 2));
+		E_r2dot += Math.sqrt(Math.pow(p.xpoints[1] - 2*p.xpoints[0] + p.xpoints[p.npoints-1], 2) + Math.pow(p.ypoints[1] - 2*p.ypoints[0] + p.ypoints[p.npoints-1], 2));
+		IJ.log("E_r2dot = " + E_r2dot);
+
+		IJ.log("culcurate the image energy");
+		// sum of lapracian value
+		int E_lapR = 0;
+		int E_lapG = 0;
+		int E_lapB = 0;
+		for (int i=0; i<p.npoints; i++){
+			E_lapR += 256 - inar_lap[p.xpoints[i] + impr_src.getWidth() * p.ypoints[i]] & 0xff;
+			E_lapG += 256 - (inar_lap[p.xpoints[i] + impr_src.getWidth() * p.ypoints[i]]>>8) & 0xff;
+			E_lapB += 256 - (inar_lap[p.xpoints[i] + impr_src.getWidth() * p.ypoints[i]]>>16) & 0xff;
+		}
+		int E_lap = E_lapR + E_lapG + E_lapB;
+		IJ.log("E_lap = " + E_lap);
+
+		IJ.log("culcurate the total energy including energy of constraint");
+		double E_total = E_rdot + E_r2dot + (double)E_lap;
+		for (int i=0; i<p.npoints; i++){
+			if (p.xpoints[i]<=2 || p.ypoints[i]<=2 || p.xpoints[i]>=impr_src.getWidth()-2 || p.ypoints[i]>=impr_src.getHeight()-2){
+				E_total = Double.MAX_VALUE;
+			}
+		}
+		IJ.log("E_total = " + E_total);
+		return E_total;
+	}
 
 }
