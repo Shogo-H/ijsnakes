@@ -8,6 +8,8 @@ import java.awt.Polygon;
 import ij.plugin.*;
 import ij.plugin.frame.*;
 
+import java.lang.Math;
+
 public class My_snake implements PlugIn {
 	private ImagePlus impl_src = null;
 	private int[] inar_lap = null;
@@ -36,7 +38,7 @@ public class My_snake implements PlugIn {
 		impl_lap.show();
 
 		IJ.log("cast imageProcessor to float array");
-		inar_lap = (int[])impr_lap.getPixels();	//int is needed when the picture is color
+		inar_lap = (int[])impr_lap.getPixels();	//int is needed when the picture has RGB
 		
 		IJ.log("set polygon roi");
 		Polygon p;	//java.awt.Polygon
@@ -46,22 +48,21 @@ public class My_snake implements PlugIn {
 		Roi po_roi = new PolygonRoi(p, Roi.POLYGON);
 		impl_lap.setRoi(po_roi);
 
-		IJ.log("culcurate the roi energy");
-		
+		IJ.log("culcurate the vdot energy");
+		double E_vdot = 0.;	
+		for(int i=0; i<p.npoints-1; i++){
+			E_vdot += Math.sqrt(Math.pow(p.xpoints[i+1] - p.xpoints[i], 2) + Math.pow(p.ypoints[i+1] - p.ypoints[i], 2));
+		}
+		E_vdot += Math.sqrt(Math.pow(p.xpoints[0] - p.xpoints[p.npoints-1], 2) + Math.pow(p.ypoints[0] - p.ypoints[p.npoints-1], 2));
+		IJ.log("E_vdot = " + E_vdot);
+
+		IJ.log("culcurate the v2dot energy");
+		double E_v2dot = 0.;
 		
 		
 		IJ.log("**** Finishing ****");
 	}
 
-/*
-	plivate double computeContourEnergy(){
-		double cEnergy;
-		
-	}
 
-	plivate double computeRegionEnergy(){
-		
-	}
-*/
 
 }
