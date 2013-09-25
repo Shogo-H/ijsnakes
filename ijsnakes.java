@@ -1,4 +1,4 @@
-// firstly please activate the source picture window
+// firstly please activate the window of source picture
 
 import ij.*;
 import ij.process.*;
