@@ -1656,19 +1656,19 @@ class ESnake implements Snake2D {
 	
 	// ----------------------------------------------------------------------------
 
-		/**
-		 * 
-		 * 
-		 */
-		private double getYofSonL(int s, double x){
-			double x0, y0, x1, y1, r;
-			x0 = xPosSkin_[s];
-			y0 = yPosSkin_[s];
-			x1 = xPosSkin_[s+1];
-			y1 = yPosSkin_[s+1];
-			if(x1!=x0) r = (x-x0)/(x1-x0);
-			else r = 0.5;
-			return y0*(1.-r)+y1*r;
-		}
+	/**
+	 * 
+	 * 
+	 */
+	private double getYofSonL(int s, double x){
+		double x0, y0, x1, y1, r;
+		x0 = xPosSkin_[s];
+		y0 = yPosSkin_[s];
+		x1 = xPosSkin_[s+1];
+		y1 = yPosSkin_[s+1];
+		if(x1!=x0) r = (x-x0)/(x1-x0);
+		else r = 0.5;
+		return y0*(1.-r)+y1*r;
+	}
 	
 }
