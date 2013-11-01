@@ -1531,101 +1531,98 @@ class ESnake implements Snake2D {
 		ArrayList<Integer> Ss = new ArrayList<Integer>();//segments on a scanning line
 		Map.Entry<Double, Integer> minl;
 		while(Ls.isEmpty()!=false){
-			minl = Ls.pollFirstEntry();
-			if(minl.getKey() < xPosSkin_[minl.getValue()-1] && minl.getKey() < xPosSkin_[minl.getValue()+1]){
-				//誕生
+			minl = Ls.firstEntry();
+			if(minl.getKey() < xPosSkin_[lst(minl)] && minl.getKey() < xPosSkin_[nxt(minl)]){
+				//"<"
 				if(Ss.isEmpty()!=true){
-					//何もない所に誕生したとき
-					if(yPosSkin_[minl.getValue()-1] > yPosSkin_[minl.getValue()+1]){
+					//if Ss is empty
+					if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
 						Ss.add(0, minl.getValue());
-						Ss.add(1, minl.getValue()-1);
+						Ss.add(1, lst(minl));
 					}else{
-						Ss.add(0, minl.getValue()-1);
+						Ss.add(0, lst(minl));
 						Ss.add(1, minl.getValue());
 					}
 				}else if(yPosSkin_[minl.getValue()] < getYofSonL(Ss.get(0), minl.getKey())){
-					//一番上に誕生したとき
-					if(yPosSkin_[minl.getValue()-1] > yPosSkin_[minl.getValue()+1]){
+					//if the node is top
+					if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
 						Ss.add(0, minl.getValue());
-						Ss.add(1, minl.getValue()-1);
+						Ss.add(1, lst(minl));
 					}else{
-						Ss.add(0, minl.getValue()-1);
+						Ss.add(0, lst(minl));
 						Ss.add(1, minl.getValue());
 					}
 					if(intersectionCheck(Ss.get(1), Ss.get(2))) return true;
 				}else if(getYofSonL(Ss.get(Ss.size()-1), minl.getKey()) < yPosSkin_[minl.getValue()]){
-					//一番下に誕生したとき
+					//if the node is bottom
 					if(yPosSkin_[minl.getValue()-1] > yPosSkin_[minl.getValue()+1]){
 						Ss.add(Ss.size(), minl.getValue());
-						Ss.add(Ss.size()+1, minl.getValue()-1);
+						Ss.add(Ss.size()+1, lst(minl));
 					}else{
-						Ss.add(Ss.size(), minl.getValue()-1);
+						Ss.add(Ss.size(), lst(minl));
 						Ss.add(Ss.size()+1, minl.getValue());
 					}
 					if(intersectionCheck(Ss.get(Ss.size()-3), Ss.get(Ss.size()-2))) return true;
 				}else{
-					//中途半端なところに誕生したとき
+					//if the node is in middle
 					for(int i=0; i<Ss.size()-1; i++){
 						if(getYofSonL(Ss.get(i), minl.getKey()) < yPosSkin_[minl.getValue()] && yPosSkin_[minl.getValue()] < getYofSonL(Ss.get(i+1), minl.getKey())){
-							if(yPosSkin_[minl.getValue()-1] > yPosSkin_[minl.getValue()+1]){
+							if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
 								Ss.add(i+1, minl.getValue());
-								Ss.add(i+2, minl.getValue()-1);
+								Ss.add(i+2, lst(minl));
 							}else{
-								Ss.add(i+1, minl.getValue()-1);
+								Ss.add(i+1, lst(minl));
 								Ss.add(i+2, minl.getValue());
 							}
 							if(intersectionCheck(Ss.get(i), Ss.get(i+1))) return true;
 							if(intersectionCheck(Ss.get(i+2), Ss.get(i+3))) return true;
+							break;
 						}
 						
 					}
 				}	
-			}else if(minl.getKey() > xPosSkin_[minl.getValue()-1] && minl.getKey() > xPosSkin_[minl.getValue()+1]){
-				//消滅
-				Ss.remove(Ss.indexOf(minl.getValue()-1));
+			}else if(minl.getKey() > xPosSkin_[lst(minl)] && minl.getKey() > xPosSkin_[nxt(minl)]){
+				//">"
+				if(yPosSkin_[lst(minl)]<yPosSkin_[nxt(minl)]){
+					//from down to up
+					if(Ss.indexOf(minl.getValue())>0 && Ss.indexOf(lst(minl))+1<Ss.size()){
+						if(intersectionCheck(Ss.get(Ss.indexOf(minl.getValue())-1), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
+					}
+				}else if(yPosSkin_[lst(minl)]>yPosSkin_[nxt(minl)]){
+					//from up to down
+					if(Ss.indexOf(lst(minl))>0 && Ss.indexOf(minl.getValue())+1<Ss.size()){
+						if(intersectionCheck(Ss.get(Ss.indexOf(lst(minl))-1), Ss.get(Ss.indexOf(minl.getValue())+1))) return true;
+					}
+				}
+				//pull 2 segments from Ss
+				Ss.remove(Ss.indexOf(lst(minl)));
 				Ss.remove(Ss.indexOf(minl.getValue()));
-				
+			}else if(xPosSkin_[lst(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[nxt(minl)]){
+				//from left to right
+				if(Ss.indexOf(lst(minl))>0){
+					//もし上があるなら
+					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))-1))) return true;
+				}
+				if(Ss.indexOf(lst(minl))+1<Ss.size()){
+					//もし下があるなら
+					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
+				}
+			}else if(xPosSkin_[nxt(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[lst(minl)]){
+				//from right to left
+				if(Ss.indexOf(minl.getValue())>0){
+					//もし上があるなら
+					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())-1))) return true;
+				}
+				if(Ss.indexOf(minl.getValue())+1<Ss.size()){
+					//もし下があるなら
+					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())+1))) return true;
+				}
 			}else{
-				//誕生も消滅もしない点
+				//例外処理
+				IJ.log("Exception nodes: " + minl.getValue());
 			}
-				Ls.put(yPosSkin_[minl.getValue()], minl.getValue());
-				Ls.put(yPosSkin_[minl.getValue()-1], minl.getValue()-1);
-
-				
-					s1 = ABOVE(s, L);
-					s2 = BELOW(s, L):
-					if	(s1 intersects s) then add (s1, s) to A;
-					if	(s2 intersects s) then add (s2, s) to A;
-			}
-				else if (p is a right endpoint) then
-				begin
-					s = segment of which p is endpoint;
-					s1 = ABOVE(s, L);
-					s2 = BELOW(s, L):
-					if	(s1 intersects s2 to the right of p) then add (s1, s2) to A;
-					DELETE(s, L);
-				end
-				else  /* p is an intersection */
-				begin
-					s1, s2 = segments that intersect at p, with s1 above s2 to the left of p.
-					s3 = ABOVE(s1 , L);
-					s4 = BELOW(s2 , L):
-					if	(s3 intersects s2) then add (s3, s2) to A;
-					if	(s1 intersects s4) then add (s1, s4) to A;
-					Interchange s1 and s2 in L;
-				end
-				/* The detected intersections must now be processed */
-				while (A != phi) do
-				begin
-					(s1, s2) = get and remove first element of A;
-					x = x-coordinate of intersection point of s1 and s2;
-					if	(MEMBER(x, E) = FALSE) then
-					begin
-						report (s1, s2);
-						INSERT(x, E);
-					end
-				end
-			end
+			Ls.remove(Ls.firstEntry().getKey());
+		}//end of while
 		return false;
 	}
 	
@@ -1639,12 +1636,22 @@ class ESnake implements Snake2D {
 		double ax, ay, bx, by, cx, cy, dx, dy;
 		ax = xPosSkin_[s1];
 		ay = yPosSkin_[s1];
-		bx = xPosSkin_[s1+1];
-		by = yPosSkin_[s1+1];
+		if(s1==MR_-1){
+			bx = xPosSkin_[0];
+			by = yPosSkin_[0];
+		}else{
+			bx = xPosSkin_[s1+1];
+			by = yPosSkin_[s1+1];
+		}
 		cx = xPosSkin_[s2];
 		cy = yPosSkin_[s2];
-		dx = xPosSkin_[s2+1];
-		dy = yPosSkin_[s2+1];
+		if(s2==MR_-1){
+			dx = xPosSkin_[0];
+			dy = yPosSkin_[0];
+		}else{
+			dx = xPosSkin_[s2+1];
+			dy = yPosSkin_[s2+1];
+		}
 		double caba, bada, bcdc, dcac;
 		caba = (cx-ax)*(by-ay)-(cy-ay)*(bx-ax);
 		bada = (bx-ax)*(dy-ay)-(by-ay)*(dx-ax);
@@ -1657,18 +1664,49 @@ class ESnake implements Snake2D {
 	// ----------------------------------------------------------------------------
 
 	/**
-	 * 
-	 * 
+	 * Get y-coordinate of the segment on the scanning line
+	 *  (created by Shogo HIRAMATSU)
 	 */
 	private double getYofSonL(int s, double x){
 		double x0, y0, x1, y1, r;
 		x0 = xPosSkin_[s];
 		y0 = yPosSkin_[s];
-		x1 = xPosSkin_[s+1];
-		y1 = yPosSkin_[s+1];
-		if(x1!=x0) r = (x-x0)/(x1-x0);
-		else r = 0.5;
+		if(s==MR_-1){
+			x1 = xPosSkin_[0];
+			y1 = yPosSkin_[0];
+		}else{
+			x1 = xPosSkin_[s+1];
+			y1 = yPosSkin_[s+1];
+		}
+		if(x1!=x0){
+			r = (x-x0)/(x1-x0);
+		}else{
+			r = 0.5;
+		}
 		return y0*(1.-r)+y1*r;
 	}
+	
+	// ----------------------------------------------------------------------------
+
+	/**
+	 * minl.getValue()+1
+	 *  (created by Shogo HIRAMATSU)
+	 */
+	private int nxt(Map.Entry<Double, Integer> minl){
+		if(minl.getValue()==MR_-1) return 0;
+		return minl.getValue()+1;
+	}
+	
+	// ----------------------------------------------------------------------------
+
+	/**
+	 * minl.getValue()-1
+	 *  (created by Shogo HIRAMATSU)
+	 */
+	private int lst(Map.Entry<Double, Integer> minl){
+		if(minl.getValue()==0) return MR_-1;
+		return minl.getValue()-1;
+	}
+		
 	
 }
