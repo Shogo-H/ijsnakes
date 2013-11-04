@@ -1,0 +1,31 @@
+<project name="build_" default="" basedir="C:/Users/Shougo/workspace/ESnake_/.">
+
+	<property name="src" location="src" />
+	<property name="bin" location="bin" />
+	<property name="dist"  location="dist" />
+	<property name="pluginsDir"  location="${basedir}/../IJ/plugins/" />
+	<property name="user.name" value="Shogo HIRAMATSU" />
+
+	<target name="main" depends="compress" description="Main target">
+		<echo>
+			Building the .jar file.
+		</echo>
+	</target>
+
+	<target name="compress" depends="" description="generate the distribution">
+		<javac 
+			srcdir="${src}" 
+			destdir="${bin}">
+		</javac>
+		<copy file="plugins.config" toDir="${bin}" />
+ 		<jar jarfile="ESnake_.jar">
+			<fileset dir="${src}" includes="**/*.*" />
+			<fileset dir="${bin}" includes="**/*.*" />
+			<manifest>
+				      <attribute name="Built-By" value="${user.name}"/>
+			</manifest>
+		</jar>
+		<copy file="ESnake_.jar" toDir="${pluginsDir}" />
+	</target>
+
+</project>
