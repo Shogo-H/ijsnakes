@@ -233,6 +233,9 @@ class ESnake implements Snake2D {
 	private Point2D.Double[] dLambda_ = null;
 	/** LUT with $Q(i,j)=\int_{0}^{M}\,\phi_M(t-j)\,\phi'_M(t-i)\,\mathrm{d}t$. */
 	private double[][] tableQ_ = null;
+	
+	/** True if the snake is crossing with itself.(created by Shogo HIRAMATSU)*/
+	private boolean cross_ = false;
 
 	/** Smallest discretization of a Laplacian filter. */
 	private static int LAPLACIAN_KERNEL[] = { 0, -1, 0, -1, 4, -1, 0, -1, 0 };
@@ -271,6 +274,8 @@ class ESnake implements Snake2D {
 
 	/** Auxiliary Gaussian smoother. */
 	private GaussianBlur gaussianBlur_ = new GaussianBlur();
+	
+
 
 	// ============================================================================
 	// PUBLIC METHODS
@@ -368,7 +373,7 @@ class ESnake implements Snake2D {
 	 */
 	@Override
 	public double energy() {
-
+		
 		if (!immortal_) {
 			life_--;
 			if (life_ == 0)
@@ -376,9 +381,9 @@ class ESnake implements Snake2D {
 		}
 
 		double contourEnergy, regionEnergy, Etotal;
-
+		
 		if (xminS_ <= 1 || yminS_ <= 1 || xmaxS_ >= widthMinusTwo_
-				|| ymaxS_ >= heightMinusTwo_) {
+				|| ymaxS_ >= heightMinusTwo_ ) {
 			Etotal = Double.MAX_VALUE;
 		} else {
 			if (energyType_ == CONTOURENERGY) {
@@ -415,9 +420,9 @@ class ESnake implements Snake2D {
 	 */
 	@Override
 	public Point2D.Double[] getEnergyGradient() {
-
+		
 		if (xminS_ <= 1 || yminS_ <= 1 || xmaxS_ >= widthMinusTwo_
-				|| ymaxS_ >= heightMinusTwo_) {
+				|| ymaxS_ >= heightMinusTwo_ ) {
 			for (int i = 0; i < M_; i++) {
 				energyGradient_[i].x = 0.0;
 				energyGradient_[i].y = 0.0;
@@ -1524,6 +1529,9 @@ class ESnake implements Snake2D {
 	 * If there is self-intersection, this method return true.
 	 */
 	private boolean selfIntersectionCheck(){
+		
+		IJ.log("Start selfIntersectionCheck().");
+		
 		TreeMap<Double, Integer> Ls = new TreeMap<Double, Integer>();//scanning lines
 		for(int i=0; i<MR_; i++){
 			Ls.put(xPosSkin_[i], i);
@@ -1544,7 +1552,7 @@ class ESnake implements Snake2D {
 						Ss.add(1, minl.getValue());
 					}
 				}else if(yPosSkin_[minl.getValue()] < getYofSonL(Ss.get(0), minl.getKey())){
-					//if the node is top
+					//if the node is the top
 					if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
 						Ss.add(0, minl.getValue());
 						Ss.add(1, lst(minl));
@@ -1554,7 +1562,7 @@ class ESnake implements Snake2D {
 					}
 					if(intersectionCheck(Ss.get(1), Ss.get(2))) return true;
 				}else if(getYofSonL(Ss.get(Ss.size()-1), minl.getKey()) < yPosSkin_[minl.getValue()]){
-					//if the node is bottom
+					//if the node is the bottom
 					if(yPosSkin_[minl.getValue()-1] > yPosSkin_[minl.getValue()+1]){
 						Ss.add(Ss.size(), minl.getValue());
 						Ss.add(Ss.size()+1, lst(minl));
@@ -1564,7 +1572,7 @@ class ESnake implements Snake2D {
 					}
 					if(intersectionCheck(Ss.get(Ss.size()-3), Ss.get(Ss.size()-2))) return true;
 				}else{
-					//if the node is in middle
+					//if the node is among other segments
 					for(int i=0; i<Ss.size()-1; i++){
 						if(getYofSonL(Ss.get(i), minl.getKey()) < yPosSkin_[minl.getValue()] && yPosSkin_[minl.getValue()] < getYofSonL(Ss.get(i+1), minl.getKey())){
 							if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
@@ -1600,25 +1608,25 @@ class ESnake implements Snake2D {
 			}else if(xPosSkin_[lst(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[nxt(minl)]){
 				//from left to right
 				if(Ss.indexOf(lst(minl))>0){
-					//もし上があるなら
+					//if it has the upper
 					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))-1))) return true;
 				}
 				if(Ss.indexOf(lst(minl))+1<Ss.size()){
-					//もし下があるなら
+					//if it has lower segments
 					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
 				}
 			}else if(xPosSkin_[nxt(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[lst(minl)]){
 				//from right to left
 				if(Ss.indexOf(minl.getValue())>0){
-					//もし上があるなら
+					//if it has the upper
 					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())-1))) return true;
 				}
 				if(Ss.indexOf(minl.getValue())+1<Ss.size()){
-					//もし下があるなら
+					//if it has lower segments
 					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())+1))) return true;
 				}
 			}else{
-				//例外処理
+				//exception process
 				IJ.log("Exception nodes: " + minl.getValue());
 			}
 			Ls.remove(Ls.firstEntry().getKey());
