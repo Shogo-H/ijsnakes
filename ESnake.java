@@ -185,8 +185,8 @@ class ESnake implements Snake2D {
 	/** PI*(2*cos(PI/M)/M)^2. */
 	private double PI4cos2PIMM2_ = 0;
 
-	/** Sampling rate at which the contours are discretized. */
-	private static final int DISCRETIZATIONSAMPLINGRATE = 500;
+	/** Sampling rate at which the contours are discretized. (500)*/
+	private static final int DISCRETIZATIONSAMPLINGRATE = 3;
 	/** N*DISCRETIZATIONSAMPLINGRATE. */
 	private int NR_ = 0;
 	/** M*DISCRETIZATIONSAMPLINGRATE. */
@@ -373,6 +373,8 @@ class ESnake implements Snake2D {
 	 */
 	@Override
 	public double energy() {
+		IJ.log("Start energy()");
+		cross_ = selfIntersectionCheck();
 		
 		if (!immortal_) {
 			life_--;
@@ -383,7 +385,7 @@ class ESnake implements Snake2D {
 		double contourEnergy, regionEnergy, Etotal;
 		
 		if (xminS_ <= 1 || yminS_ <= 1 || xmaxS_ >= widthMinusTwo_
-				|| ymaxS_ >= heightMinusTwo_ ) {
+				|| ymaxS_ >= heightMinusTwo_ || cross_==true) {
 			Etotal = Double.MAX_VALUE;
 		} else {
 			if (energyType_ == CONTOURENERGY) {
@@ -420,9 +422,11 @@ class ESnake implements Snake2D {
 	 */
 	@Override
 	public Point2D.Double[] getEnergyGradient() {
+		IJ.log("Start getEnergyGradient()");
+		cross_ = selfIntersectionCheck();
 		
 		if (xminS_ <= 1 || yminS_ <= 1 || xmaxS_ >= widthMinusTwo_
-				|| ymaxS_ >= heightMinusTwo_ ) {
+				|| ymaxS_ >= heightMinusTwo_ || cross_==true) {
 			for (int i = 0; i < M_; i++) {
 				energyGradient_[i].x = 0.0;
 				energyGradient_[i].y = 0.0;
@@ -875,8 +879,7 @@ class ESnake implements Snake2D {
 	/**
 	 * Computes a line integral.
 	 */
-	private double getE(float[] f, double[] fy, double[] x, double y[],
-			double[] xp) {
+	private double getE(float[] f, double[] fy, double[] x, double y[], double[] xp) {
 
 		double fuy_val;
 		int x1, x2, y1, y2;
@@ -1529,7 +1532,6 @@ class ESnake implements Snake2D {
 	 * If there is self-intersection, this method return true.
 	 */
 	private boolean selfIntersectionCheck(){
-		
 		IJ.log("Start selfIntersectionCheck().");
 		
 		TreeMap<Double, Integer> Ls = new TreeMap<Double, Integer>();//scanning lines
@@ -1538,11 +1540,11 @@ class ESnake implements Snake2D {
 		}
 		ArrayList<Integer> Ss = new ArrayList<Integer>();//segments on a scanning line
 		Map.Entry<Double, Integer> minl;
-		while(Ls.isEmpty()!=false){
+		while(Ls.isEmpty()==false){
 			minl = Ls.firstEntry();
 			if(minl.getKey() < xPosSkin_[lst(minl)] && minl.getKey() < xPosSkin_[nxt(minl)]){
 				//"<"
-				if(Ss.isEmpty()!=true){
+				if(Ss.isEmpty()==true){
 					//if Ss is empty
 					if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
 						Ss.add(0, minl.getValue());
@@ -1606,24 +1608,34 @@ class ESnake implements Snake2D {
 				Ss.remove(Ss.indexOf(lst(minl)));
 				Ss.remove(Ss.indexOf(minl.getValue()));
 			}else if(xPosSkin_[lst(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[nxt(minl)]){
-				//from left to right
+				//"->" from left to right
 				if(Ss.indexOf(lst(minl))>0){
-					//if it has the upper
+					//if it has upper segments
 					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))-1))) return true;
 				}
 				if(Ss.indexOf(lst(minl))+1<Ss.size()){
 					//if it has lower segments
 					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
 				}
+				if(Ss.indexOf(lst(minl))>-1){
+					Ss.set(Ss.indexOf(lst(minl)), minl.getValue());
+				}else{
+					Ss.set(Ss.indexOf(lst(minl)-1), minl.getValue());
+				}
 			}else if(xPosSkin_[nxt(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[lst(minl)]){
-				//from right to left
+				//"<-" from right to left
 				if(Ss.indexOf(minl.getValue())>0){
-					//if it has the upper
+					//if it has upper segments
 					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())-1))) return true;
 				}
 				if(Ss.indexOf(minl.getValue())+1<Ss.size()){
 					//if it has lower segments
 					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())+1))) return true;
+				}
+				if(Ss.indexOf(minl.getValue())>-1){
+					Ss.set(Ss.indexOf(minl.getValue()), lst(minl));
+				}else{
+					Ss.set(Ss.indexOf(minl.getValue()+1), lst(minl));
 				}
 			}else{
 				//exception process
