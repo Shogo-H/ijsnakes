@@ -185,8 +185,8 @@ class ESnake implements Snake2D {
 	/** PI*(2*cos(PI/M)/M)^2. */
 	private double PI4cos2PIMM2_ = 0;
 
-	/** Sampling rate at which the contours are discretized. (500)*/
-	private static final int DISCRETIZATIONSAMPLINGRATE = 3;
+	/** Sampling rate at which the contours are discretized.(originally 500)*/
+	private static final int DISCRETIZATIONSAMPLINGRATE = 5;
 	/** N*DISCRETIZATIONSAMPLINGRATE. */
 	private int NR_ = 0;
 	/** M*DISCRETIZATIONSAMPLINGRATE. */
@@ -1532,57 +1532,59 @@ class ESnake implements Snake2D {
 	 * If there is self-intersection, this method return true.
 	 */
 	private boolean selfIntersectionCheck(){
-		IJ.log("Start selfIntersectionCheck().");
-		
-		TreeMap<Double, Integer> Ls = new TreeMap<Double, Integer>();//scanning lines
+		HashMap<Integer, Double> LsRaw = new HashMap<Integer, Double>();//scanning lines not sorted
+		ValueComparator bvc =  new ValueComparator(LsRaw);
+		TreeMap<Integer, Double> Ls = new TreeMap<Integer, Double>(bvc);//scanning lines sorted
 		for(int i=0; i<MR_; i++){
-			Ls.put(xPosSkin_[i], i);
+			LsRaw.put(i, xPosSkin_[i]);
 		}
+		Ls.putAll(LsRaw);
+		Map.Entry<Integer, Double> minl;
 		ArrayList<Integer> Ss = new ArrayList<Integer>();//segments on a scanning line
-		Map.Entry<Double, Integer> minl;
+		
 		while(Ls.isEmpty()==false){
 			minl = Ls.firstEntry();
-			if(minl.getKey() < xPosSkin_[lst(minl)] && minl.getKey() < xPosSkin_[nxt(minl)]){
+			if(minl.getValue() < xPosSkin_[lst(minl)] && minl.getValue() < xPosSkin_[nxt(minl)]){
 				//"<"
 				if(Ss.isEmpty()==true){
 					//if Ss is empty
 					if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
-						Ss.add(0, minl.getValue());
+						Ss.add(0, minl.getKey());
 						Ss.add(1, lst(minl));
 					}else{
 						Ss.add(0, lst(minl));
-						Ss.add(1, minl.getValue());
+						Ss.add(1, minl.getKey());
 					}
-				}else if(yPosSkin_[minl.getValue()] < getYofSonL(Ss.get(0), minl.getKey())){
+				}else if(yPosSkin_[minl.getKey()] < getYofSonL(Ss.get(0), minl.getValue())){
 					//if the node is the top
 					if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
-						Ss.add(0, minl.getValue());
+						Ss.add(0, minl.getKey());
 						Ss.add(1, lst(minl));
 					}else{
 						Ss.add(0, lst(minl));
-						Ss.add(1, minl.getValue());
+						Ss.add(1, minl.getKey());
 					}
 					if(intersectionCheck(Ss.get(1), Ss.get(2))) return true;
-				}else if(getYofSonL(Ss.get(Ss.size()-1), minl.getKey()) < yPosSkin_[minl.getValue()]){
-					//if the node is the bottom
-					if(yPosSkin_[minl.getValue()-1] > yPosSkin_[minl.getValue()+1]){
-						Ss.add(Ss.size(), minl.getValue());
-						Ss.add(Ss.size()+1, lst(minl));
+				}else if(getYofSonL(Ss.get(Ss.size()-1), minl.getValue()) < yPosSkin_[minl.getKey()]){
+					//if the node is in the bottom
+					if(yPosSkin_[minl.getKey()-1] > yPosSkin_[minl.getKey()+1]){
+						Ss.add(Ss.size(), minl.getKey());
+						Ss.add(Ss.size(), lst(minl));//Ss.size() is increased by proceeding line.
 					}else{
 						Ss.add(Ss.size(), lst(minl));
-						Ss.add(Ss.size()+1, minl.getValue());
+						Ss.add(Ss.size(), minl.getKey());//Ss.size() is increased by proceeding line.
 					}
 					if(intersectionCheck(Ss.get(Ss.size()-3), Ss.get(Ss.size()-2))) return true;
 				}else{
 					//if the node is among other segments
 					for(int i=0; i<Ss.size()-1; i++){
-						if(getYofSonL(Ss.get(i), minl.getKey()) < yPosSkin_[minl.getValue()] && yPosSkin_[minl.getValue()] < getYofSonL(Ss.get(i+1), minl.getKey())){
+						if(getYofSonL(Ss.get(i), minl.getValue()) < yPosSkin_[minl.getKey()] && yPosSkin_[minl.getKey()] < getYofSonL(Ss.get(i+1), minl.getValue())){
 							if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
-								Ss.add(i+1, minl.getValue());
+								Ss.add(i+1, minl.getKey());
 								Ss.add(i+2, lst(minl));
 							}else{
 								Ss.add(i+1, lst(minl));
-								Ss.add(i+2, minl.getValue());
+								Ss.add(i+2, minl.getKey());
 							}
 							if(intersectionCheck(Ss.get(i), Ss.get(i+1))) return true;
 							if(intersectionCheck(Ss.get(i+2), Ss.get(i+3))) return true;
@@ -1591,57 +1593,59 @@ class ESnake implements Snake2D {
 						
 					}
 				}	
-			}else if(minl.getKey() > xPosSkin_[lst(minl)] && minl.getKey() > xPosSkin_[nxt(minl)]){
+			}else if(minl.getValue() > xPosSkin_[lst(minl)] && minl.getValue() > xPosSkin_[nxt(minl)]){
 				//">"
 				if(yPosSkin_[lst(minl)]<yPosSkin_[nxt(minl)]){
 					//from down to up
-					if(Ss.indexOf(minl.getValue())>0 && Ss.indexOf(lst(minl))+1<Ss.size()){
-						if(intersectionCheck(Ss.get(Ss.indexOf(minl.getValue())-1), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
+					if(Ss.indexOf(minl.getKey())>0 && Ss.indexOf(lst(minl))+1<Ss.size()){
+						if(intersectionCheck(Ss.get(Ss.indexOf(minl.getKey())-1), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
 					}
 				}else if(yPosSkin_[lst(minl)]>yPosSkin_[nxt(minl)]){
 					//from up to down
-					if(Ss.indexOf(lst(minl))>0 && Ss.indexOf(minl.getValue())+1<Ss.size()){
-						if(intersectionCheck(Ss.get(Ss.indexOf(lst(minl))-1), Ss.get(Ss.indexOf(minl.getValue())+1))) return true;
+					if(Ss.indexOf(lst(minl))>0 && Ss.indexOf(minl.getKey())+1<Ss.size()){
+						if(intersectionCheck(Ss.get(Ss.indexOf(lst(minl))-1), Ss.get(Ss.indexOf(minl.getKey())+1))) return true;
 					}
 				}
 				//pull 2 segments from Ss
 				Ss.remove(Ss.indexOf(lst(minl)));
-				Ss.remove(Ss.indexOf(minl.getValue()));
-			}else if(xPosSkin_[lst(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[nxt(minl)]){
+				Ss.remove(Ss.indexOf(minl.getKey()));
+			}else if(xPosSkin_[lst(minl)] < minl.getValue() && minl.getValue() < xPosSkin_[nxt(minl)]){
 				//"->" from left to right
 				if(Ss.indexOf(lst(minl))>0){
 					//if it has upper segments
-					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))-1))) return true;
+					if(intersectionCheck(minl.getKey(), Ss.get(Ss.indexOf(lst(minl))-1))) return true;
 				}
 				if(Ss.indexOf(lst(minl))+1<Ss.size()){
 					//if it has lower segments
-					if(intersectionCheck(minl.getValue(), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
+					if(intersectionCheck(minl.getKey(), Ss.get(Ss.indexOf(lst(minl))+1))) return true;
 				}
 				if(Ss.indexOf(lst(minl))>-1){
-					Ss.set(Ss.indexOf(lst(minl)), minl.getValue());
+					Ss.set(Ss.indexOf(lst(minl)), minl.getKey());
 				}else{
-					Ss.set(Ss.indexOf(lst(minl)-1), minl.getValue());
+					Ss.set(Ss.indexOf(lst(minl)-1), minl.getKey());
 				}
-			}else if(xPosSkin_[nxt(minl)] < minl.getKey() && minl.getKey() < xPosSkin_[lst(minl)]){
+			}else if(xPosSkin_[nxt(minl)] < minl.getValue() && minl.getValue() < xPosSkin_[lst(minl)]){
 				//"<-" from right to left
-				if(Ss.indexOf(minl.getValue())>0){
+				if(Ss.indexOf(minl.getKey())>0){
 					//if it has upper segments
-					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())-1))) return true;
+					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getKey())-1))) return true;
 				}
-				if(Ss.indexOf(minl.getValue())+1<Ss.size()){
+				if(Ss.indexOf(minl.getKey())+1<Ss.size()){
 					//if it has lower segments
-					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getValue())+1))) return true;
+					if(intersectionCheck(lst(minl), Ss.get(Ss.indexOf(minl.getKey())+1))) return true;
 				}
-				if(Ss.indexOf(minl.getValue())>-1){
-					Ss.set(Ss.indexOf(minl.getValue()), lst(minl));
+				if(Ss.indexOf(minl.getKey())>-1){
+					Ss.set(Ss.indexOf(minl.getKey()), lst(minl));
 				}else{
-					Ss.set(Ss.indexOf(minl.getValue()+1), lst(minl));
+					Ss.set(Ss.indexOf(minl.getKey()+1), lst(minl));
 				}
 			}else{
 				//exception process
-				IJ.log("Exception nodes: " + minl.getValue());
+				IJ.log("Exception nodes: " + minl.getKey());
 			}
-			Ls.remove(Ls.firstEntry().getKey());
+			LsRaw.remove(minl.getKey());// Ls is referring LsRaw
+			Ls.clear();
+			Ls.putAll(LsRaw);
 		}//end of while
 		return false;
 	}
@@ -1712,9 +1716,9 @@ class ESnake implements Snake2D {
 	 * minl.getValue()+1
 	 *  (created by Shogo HIRAMATSU)
 	 */
-	private int nxt(Map.Entry<Double, Integer> minl){
-		if(minl.getValue()==MR_-1) return 0;
-		return minl.getValue()+1;
+	private int nxt(Map.Entry<Integer, Double> minl){
+		if(minl.getKey()==MR_-1) return 0;
+		return minl.getKey()+1;
 	}
 	
 	// ----------------------------------------------------------------------------
@@ -1723,10 +1727,29 @@ class ESnake implements Snake2D {
 	 * minl.getValue()-1
 	 *  (created by Shogo HIRAMATSU)
 	 */
-	private int lst(Map.Entry<Double, Integer> minl){
-		if(minl.getValue()==0) return MR_-1;
-		return minl.getValue()-1;
+	private int lst(Map.Entry<Integer, Double> minl){
+		if(minl.getKey()==0) return MR_-1;
+		return minl.getKey()-1;
 	}
-		
 	
+}
+
+// ----------------------------------------------------------------------------
+
+/**
+ * Comparate treemap by value
+ *  (created by Shogo HIRAMATSU)
+ */
+class ValueComparator implements Comparator<Integer> {
+    Map<Integer, Double> base;
+    public ValueComparator(Map<Integer, Double> base) {
+        this.base = base;
+    }
+    public int compare(Integer a, Integer b) {
+        if (base.get(a) <= base.get(b)) {
+            return -1;
+        } else {
+            return 1;
+        } // returning 0 would merge keys
+    }
 }
