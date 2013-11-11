@@ -373,7 +373,6 @@ class ESnake implements Snake2D {
 	 */
 	@Override
 	public double energy() {
-		IJ.log("Start energy()");
 		cross_ = selfIntersectionCheck();
 		
 		if (!immortal_) {
@@ -422,7 +421,6 @@ class ESnake implements Snake2D {
 	 */
 	@Override
 	public Point2D.Double[] getEnergyGradient() {
-		IJ.log("Start getEnergyGradient()");
 		cross_ = selfIntersectionCheck();
 		
 		if (xminS_ <= 1 || yminS_ <= 1 || xmaxS_ >= widthMinusTwo_
@@ -1532,6 +1530,9 @@ class ESnake implements Snake2D {
 	 * If there is self-intersection, this method return true.
 	 */
 	private boolean selfIntersectionCheck(){
+		if(selfIntersectionCheckC()==true){
+			return true;
+		}
 		HashMap<Integer, Double> LsRaw = new HashMap<Integer, Double>();//scanning lines not sorted
 		ValueComparator bvc =  new ValueComparator(LsRaw);
 		TreeMap<Integer, Double> Ls = new TreeMap<Integer, Double>(bvc);//scanning lines sorted
@@ -1567,7 +1568,7 @@ class ESnake implements Snake2D {
 					if(intersectionCheck(Ss.get(1), Ss.get(2))) return true;
 				}else if(getYofSonL(Ss.get(Ss.size()-1), minl.getValue()) < yPosSkin_[minl.getKey()]){
 					//if the node is in the bottom
-					if(yPosSkin_[minl.getKey()-1] > yPosSkin_[minl.getKey()+1]){
+					if(yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]){
 						Ss.add(Ss.size(), minl.getKey());
 						Ss.add(Ss.size(), lst(minl));//Ss.size() is increased by proceeding line.
 					}else{
@@ -1609,7 +1610,7 @@ class ESnake implements Snake2D {
 				//pull 2 segments from Ss
 				Ss.remove(Ss.indexOf(lst(minl)));
 				Ss.remove(Ss.indexOf(minl.getKey()));
-			}else if(xPosSkin_[lst(minl)] < minl.getValue() && minl.getValue() < xPosSkin_[nxt(minl)]){
+			}else if(xPosSkin_[lst(minl)] <= minl.getValue() && minl.getValue() <= xPosSkin_[nxt(minl)]){
 				//"->" from left to right
 				if(Ss.indexOf(lst(minl))>0){
 					//if it has upper segments
@@ -1624,7 +1625,7 @@ class ESnake implements Snake2D {
 				}else{
 					Ss.set(Ss.indexOf(lst(minl)-1), minl.getKey());
 				}
-			}else if(xPosSkin_[nxt(minl)] < minl.getValue() && minl.getValue() < xPosSkin_[lst(minl)]){
+			}else if(xPosSkin_[nxt(minl)] <= minl.getValue() && minl.getValue() <= xPosSkin_[lst(minl)]){
 				//"<-" from right to left
 				if(Ss.indexOf(minl.getKey())>0){
 					//if it has upper segments
@@ -1732,6 +1733,212 @@ class ESnake implements Snake2D {
 		return minl.getKey()-1;
 	}
 	
+	// ----------------------------------------------------------------------------
+
+	/**
+	 * Detect self-intersection of control points (created by Shogo HIRAMATSU)
+	 * If there is self-intersection, this method return true.
+	 */
+	private boolean selfIntersectionCheckC(){
+			HashMap<Integer, Double> LsRaw = new HashMap<Integer, Double>();//scanning lines not sorted
+			ValueComparator bvc =  new ValueComparator(LsRaw);
+			TreeMap<Integer, Double> Ls = new TreeMap<Integer, Double>(bvc);//scanning lines sorted
+			for(int i=0; i<M_; i++){
+				LsRaw.put(i, coef_[i].x);
+			}
+			Ls.putAll(LsRaw);
+			Map.Entry<Integer, Double> minl;
+			ArrayList<Integer> Ss = new ArrayList<Integer>();//segments on a scanning line
+			
+			while(Ls.isEmpty()==false){
+				minl = Ls.firstEntry();
+				if(minl.getValue() < coef_[lstC(minl)].x && minl.getValue() < coef_[nxtC(minl)].x){
+					//"<"
+					if(Ss.isEmpty()==true){
+						//if Ss is empty
+						if(coef_[lstC(minl)].y > coef_[nxtC(minl)].y){
+							Ss.add(0, minl.getKey());
+							Ss.add(1, lstC(minl));
+						}else{
+							Ss.add(0, lstC(minl));
+							Ss.add(1, minl.getKey());
+						}
+					}else if(coef_[minl.getKey()].y < getYofSonLC(Ss.get(0), minl.getValue())){
+						//if the node is the top
+						if(coef_[lstC(minl)].y > coef_[nxtC(minl)].y){
+							Ss.add(0, minl.getKey());
+							Ss.add(1, lstC(minl));
+						}else{
+							Ss.add(0, lstC(minl));
+							Ss.add(1, minl.getKey());
+						}
+						if(intersectionCheckC(Ss.get(1), Ss.get(2))) return true;
+					}else if(getYofSonLC(Ss.get(Ss.size()-1), minl.getValue()) < coef_[minl.getKey()].y){
+						//if the node is in the bottom
+						if(coef_[lstC(minl)].y > coef_[nxtC(minl)].y){
+							Ss.add(Ss.size(), minl.getKey());
+							Ss.add(Ss.size(), lstC(minl));//Ss.size() is increased by proceeding line.
+						}else{
+							Ss.add(Ss.size(), lstC(minl));
+							Ss.add(Ss.size(), minl.getKey());//Ss.size() is increased by proceeding line.
+						}
+						if(intersectionCheckC(Ss.get(Ss.size()-3), Ss.get(Ss.size()-2))) return true;
+					}else{
+						//if the node is among other segments
+						for(int i=0; i<Ss.size()-1; i++){
+							if(getYofSonLC(Ss.get(i), minl.getValue()) < coef_[minl.getKey()].y && coef_[minl.getKey()].y < getYofSonL(Ss.get(i+1), minl.getValue())){
+								if(coef_[lstC(minl)].y > coef_[nxtC(minl)].y){
+									Ss.add(i+1, minl.getKey());
+									Ss.add(i+2, lstC(minl));
+								}else{
+									Ss.add(i+1, lstC(minl));
+									Ss.add(i+2, minl.getKey());
+								}
+								if(intersectionCheckC(Ss.get(i), Ss.get(i+1))) return true;
+								if(intersectionCheckC(Ss.get(i+2), Ss.get(i+3))) return true;
+								break;
+							}
+							
+						}
+					}	
+				}else if(minl.getValue() > coef_[lstC(minl)].x && minl.getValue() > coef_[nxtC(minl)].x){
+					//">"
+					if(coef_[lstC(minl)].y < coef_[nxtC(minl)].y){
+						//from down to up
+						if(Ss.indexOf(minl.getKey())>0 && Ss.indexOf(lst(minl))+1<Ss.size()){
+							if(intersectionCheckC(Ss.get(Ss.indexOf(minl.getKey())-1), Ss.get(Ss.indexOf(lstC(minl))+1))) return true;
+						}
+					}else if(coef_[lstC(minl)].y > coef_[nxtC(minl)].y){
+						//from up to down
+						if(Ss.indexOf(lstC(minl))>0 && Ss.indexOf(minl.getKey())+1<Ss.size()){
+							if(intersectionCheckC(Ss.get(Ss.indexOf(lstC(minl))-1), Ss.get(Ss.indexOf(minl.getKey())+1))) return true;
+						}
+					}
+					//pull 2 segments from Ss
+					Ss.remove(Ss.indexOf(lstC(minl)));
+					Ss.remove(Ss.indexOf(minl.getKey()));
+				}else if(coef_[lstC(minl)].x <= minl.getValue() && minl.getValue() <= coef_[nxtC(minl)].x){
+					//"->" from left to right
+					if(Ss.indexOf(lstC(minl))>0){
+						//if it has upper segments
+						if(intersectionCheckC(minl.getKey(), Ss.get(Ss.indexOf(lstC(minl))-1))) return true;
+					}
+					if(Ss.indexOf(lstC(minl))+1<Ss.size()){
+						//if it has lower segments
+						if(intersectionCheckC(minl.getKey(), Ss.get(Ss.indexOf(lstC(minl))+1))) return true;
+					}
+					if(Ss.indexOf(lstC(minl))>-1){
+						Ss.set(Ss.indexOf(lstC(minl)), minl.getKey());
+					}else{
+						Ss.set(Ss.indexOf(lstC(minl)-1), minl.getKey());
+					}
+				}else if(coef_[nxtC(minl)].x <= minl.getValue() && minl.getValue() <= coef_[lstC(minl)].x){
+					//"<-" from right to left
+					if(Ss.indexOf(minl.getKey())>0){
+						//if it has upper segments
+						if(intersectionCheckC(lstC(minl), Ss.get(Ss.indexOf(minl.getKey())-1))) return true;
+					}
+					if(Ss.indexOf(minl.getKey())+1<Ss.size()){
+						//if it has lower segments
+						if(intersectionCheckC(lstC(minl), Ss.get(Ss.indexOf(minl.getKey())+1))) return true;
+					}
+					if(Ss.indexOf(minl.getKey())>-1){
+						Ss.set(Ss.indexOf(minl.getKey()), lstC(minl));
+					}else{
+						Ss.set(Ss.indexOf(minl.getKey()+1), lstC(minl));
+					}
+				}else{
+					//exception process
+					IJ.log("Exception nodes: " + minl.getKey());
+				}
+				LsRaw.remove(minl.getKey());// Ls is referring LsRaw
+				Ls.clear();
+				Ls.putAll(LsRaw);
+			}//end of while
+			return false;
+		}
+		
+		// ----------------------------------------------------------------------------
+
+		/**
+		 * Detect intersection of control points(created by Shogo HIRAMATSU)
+		 * If 2 sections intersect, this method return true.
+		 */
+		private boolean intersectionCheckC(int s1, int s2){
+			double ax, ay, bx, by, cx, cy, dx, dy;
+			ax = coef_[s1].x;
+			ay = coef_[s1].y;
+			if(s1==M_-1){
+				bx = coef_[0].x;
+				by = coef_[0].y;
+			}else{
+				bx = coef_[s1+1].x;
+				by = coef_[s1+1].y;
+			}
+			cx = coef_[s2].x;
+			cy = coef_[s2].y;
+			if(s2==M_-1){
+				dx = coef_[0].x;
+				dy = coef_[0].y;
+			}else{
+				dx = coef_[s2+1].x;
+				dy = coef_[s2+1].y;
+			}
+			double caba, bada, bcdc, dcac;
+			caba = (cx-ax)*(by-ay)-(cy-ay)*(bx-ax);
+			bada = (bx-ax)*(dy-ay)-(by-ay)*(dx-ax);
+			bcdc = (bx-cx)*(dy-cy)-(by-cy)*(dx-cx);
+			dcac = (bx-cx)*(ay-cy)-(by-cy)*(ax-cx);
+			if(caba*bada>0 && bcdc*dcac>0) return true;
+			else return false;
+		}
+		
+		// ----------------------------------------------------------------------------
+
+		/**
+		 * Get y-coordinate of the segment of control points on the scanning line
+		 *  (created by Shogo HIRAMATSU)
+		 */
+		private double getYofSonLC(int s, double x){
+			double x0, y0, x1, y1, r;
+			x0 = coef_[s].x;
+			y0 = coef_[s].y;
+			if(s==M_-1){
+				x1 = coef_[0].x;
+				y1 = coef_[0].y;
+			}else{
+				x1 = coef_[s+1].x;
+				y1 = coef_[s+1].y;
+			}
+			if(x1!=x0){
+				r = (x-x0)/(x1-x0);
+			}else{
+				r = 0.5;
+			}
+			return y0*(1.-r)+y1*r;
+		}
+		
+		// ----------------------------------------------------------------------------
+
+		/**
+		 * minl.getValue()+1 of control points
+		 *  (created by Shogo HIRAMATSU)
+		 */
+		private int nxtC(Map.Entry<Integer, Double> minl){
+			if(minl.getKey()==M_-1) return 0;
+			return minl.getKey()+1;
+		}
+		
+		// ----------------------------------------------------------------------------
+
+		/**
+		 * minl.getValue()-1 of control points
+		 *  (created by Shogo HIRAMATSU)
+		 */
+		private int lstC(Map.Entry<Integer, Double> minl){
+			if(minl.getKey()==0) return M_-1;
+			return minl.getKey()-1;
+		}
 }
 
 // ----------------------------------------------------------------------------
