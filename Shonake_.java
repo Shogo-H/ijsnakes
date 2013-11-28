@@ -1,5 +1,6 @@
 import ij.IJ;
 import ij.ImagePlus;
+import ij.ImageStack;
 import ij.Macro;
 import ij.gui.GenericDialog;
 import ij.gui.PolygonRoi;
@@ -30,6 +31,9 @@ public class Shonake_ implements ExtendedPlugInFilter {
 
 	/** Image to process. */
 	private ImagePlus imp_ = null;
+
+	/** Image processed */
+	private ImagePlus dstPlus_ = null;
 
 	/** Initial dialog. */
 	private final GenericDialog dialog_ = new GenericDialog("Shonake");
@@ -115,7 +119,7 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	private static int detect_ = ESnake.DETECTDARK;
 
 	/** Type of energy used. */
-//	private static int energyType_ = ESnake.CONTOURENERGY;
+	// private static int energyType_ = ESnake.CONTOURENERGY;
 	private static int energyType_ = ESnake.REGIONENERGY;
 
 	/** Tradeoff energy parameter. */
@@ -126,6 +130,18 @@ public class Shonake_ implements ExtendedPlugInFilter {
 
 	/** If true, the result is stored in the RoiManager of ImageJ. */
 	private static boolean saveROI_ = true;
+
+	/** If true, it is first frame. (made by Shogo HIRAMATSU) */
+	private static boolean firstframe_ = true;
+	
+	/** If 0, it is last frame. (made by Shogo HIRAMATSU) */
+	private static int lastframe_ = -1;
+
+	// /** Initial contour. (made by Shogo HIRAMATSU) */
+	// private Roi initialContour_ = null;
+
+	/** Stack for processed images. (made by Shogo HIRAMATSU) */
+	private ImageStack dstStack_ = null;
 
 	// ============================================================================
 	// PUBLIC METHODS
@@ -141,121 +157,140 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	 */
 	@Override
 	public void run(ImageProcessor ip) {
-//		/** get numbers in "dialog_" and store to vector from top to bottom */
-//		final Vector<?> numbers = dialog_.getNumericFields();
-//
-//		/** get checks in "dialog_" and store to vector from top to bottom */
-//		final Vector<?> checkboxes = dialog_.getCheckboxes();
-//
-//		/** get pop-up-menu's choice in "dialog_" and store */
-//		String targetAsString = dialog_.getNextChoice();
-//		if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTDARK])) {
-//			detect_ = ESnake.DETECTDARK;
-//		} else if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTBRIGHT])) {
-//			detect_ = ESnake.DETECTBRIGHT;
-//		} else {
-//			IJ.error("Internal error: unexpected brightness detection mode");
-//			return;
-//		}
-//
-//		M_ = (new Integer(((TextField) numbers.elementAt(0)).getText())).intValue();
-//		std_ = (new Integer(((TextField) numbers.elementAt(1)).getText())).intValue();
-//
-//		String energytypeAsString = dialog_.getNextChoice();
-//		if (energytypeAsString.equals(ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY])) {
-//			energyType_ = ESnake.CONTOURENERGY;
-//		} else if (energytypeAsString
-//				.equals(ENERGYTYPEOPTIONS[ESnake.REGIONENERGY])) {
-//			energyType_ = ESnake.REGIONENERGY;
-//		} else if (energytypeAsString
-//				.equals(ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY])) {
-//			energyType_ = ESnake.MIXTUREENERGY;
-//		} else {
-//			IJ.error("Internal error: unexpected energy type selected");
-//			return;
-//		}
-//
-//		alpha_ = (new Double(((TextField) numbers.elementAt(2)).getText()))
-//				.doubleValue();
-//		life_ = (new Integer(((TextField) numbers.elementAt(3)).getText()))
-//				.intValue();
-//
-//		immortalFlag_ = ((Checkbox) checkboxes.elementAt(0)).getState();
-//		saveROI_ = ((Checkbox) checkboxes.elementAt(1)).getState();
-//		
-//		// ----------------------------------------------------------------------------
-//		
-//		/** for saving ROI*/
-//		Recorder.setCommand("Shonake ");
-//
-//		if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTDARK])) {
-//			Recorder.recordOption(TARGET, TARGETOPTIONS[ESnake.DETECTDARK]);
-//		} else if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTBRIGHT])) {
-//			Recorder.recordOption(TARGET, TARGETOPTIONS[ESnake.DETECTBRIGHT]);
-//		} else {
-//			IJ.error("Internal error: unexpected brightness detection mode");
-//			return;
-//		}
-//
-//		Recorder.recordOption(NUM_NODES, "" + M_);
-//		Recorder.recordOption(GAUSSIAN_BLUR, "" + std_);
-//
-//		if (energytypeAsString.equals(ENERGYTYPEOPTIONS[ESnake.REGIONENERGY])) {
-//			Recorder.recordOption(ENERGY_TYPE,
-//					ENERGYTYPEOPTIONS[ESnake.REGIONENERGY]);
-//		} else if (energytypeAsString
-//				.equals(ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY])) {
-//			Recorder.recordOption(ENERGY_TYPE,
-//					ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY]);
-//		} else if (energytypeAsString
-//				.equals(ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY])) {
-//			Recorder.recordOption(ENERGY_TYPE,
-//					ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY]);
-//		} else {
-//			IJ.error("Internal error: unexpected energy type selected");
-//			return;
-//		}
-//
-//		Recorder.recordOption(ALPHA, "" + alpha_);
-//		Recorder.recordOption(MAX_ITER, "" + life_);
-//		Recorder.recordOption(IMMORTAL, "" + immortalFlag_);
-//		Recorder.recordOption(SAVE, "" + saveROI_);
-//
-//		if (saveROI_)
-//			Recorder.saveCommand();
-		
+		if (firstframe_ == true) {
+			/** get numbers in "dialog_" and store to vector from top to bottom */
+			final Vector<?> numbers = dialog_.getNumericFields();
+
+			/** get checks in "dialog_" and store to vector from top to bottom */
+			final Vector<?> checkboxes = dialog_.getCheckboxes();
+
+			/** get pop-up-menu's choice in "dialog_" and store */
+			String targetAsString = dialog_.getNextChoice();
+			if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTDARK])) {
+				detect_ = ESnake.DETECTDARK;
+			} else if (targetAsString
+					.equals(TARGETOPTIONS[ESnake.DETECTBRIGHT])) {
+				detect_ = ESnake.DETECTBRIGHT;
+			} else {
+				IJ.error("Internal error: unexpected brightness detection mode");
+				return;
+			}
+
+			M_ = (new Integer(((TextField) numbers.elementAt(0)).getText()))
+					.intValue();
+			std_ = (new Integer(((TextField) numbers.elementAt(1)).getText()))
+					.intValue();
+
+			String energytypeAsString = dialog_.getNextChoice();
+			if (energytypeAsString
+					.equals(ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY])) {
+				energyType_ = ESnake.CONTOURENERGY;
+			} else if (energytypeAsString
+					.equals(ENERGYTYPEOPTIONS[ESnake.REGIONENERGY])) {
+				energyType_ = ESnake.REGIONENERGY;
+			} else if (energytypeAsString
+					.equals(ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY])) {
+				energyType_ = ESnake.MIXTUREENERGY;
+			} else {
+				IJ.error("Internal error: unexpected energy type selected");
+				return;
+			}
+
+			alpha_ = (new Double(((TextField) numbers.elementAt(2)).getText()))
+					.doubleValue();
+			life_ = (new Integer(((TextField) numbers.elementAt(3)).getText()))
+					.intValue();
+
+			immortalFlag_ = ((Checkbox) checkboxes.elementAt(0)).getState();
+			saveROI_ = ((Checkbox) checkboxes.elementAt(1)).getState();
+
+			// ----------------------------------------------------------------------------
+
+			/** for saving ROI */
+			Recorder.setCommand("Shonake ");
+
+			if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTDARK])) {
+				Recorder.recordOption(TARGET, TARGETOPTIONS[ESnake.DETECTDARK]);
+			} else if (targetAsString
+					.equals(TARGETOPTIONS[ESnake.DETECTBRIGHT])) {
+				Recorder.recordOption(TARGET,
+						TARGETOPTIONS[ESnake.DETECTBRIGHT]);
+			} else {
+				IJ.error("Internal error: unexpected brightness detection mode");
+				return;
+			}
+
+			Recorder.recordOption(NUM_NODES, "" + M_);
+			Recorder.recordOption(GAUSSIAN_BLUR, "" + std_);
+
+			if (energytypeAsString
+					.equals(ENERGYTYPEOPTIONS[ESnake.REGIONENERGY])) {
+				Recorder.recordOption(ENERGY_TYPE,
+						ENERGYTYPEOPTIONS[ESnake.REGIONENERGY]);
+			} else if (energytypeAsString
+					.equals(ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY])) {
+				Recorder.recordOption(ENERGY_TYPE,
+						ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY]);
+			} else if (energytypeAsString
+					.equals(ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY])) {
+				Recorder.recordOption(ENERGY_TYPE,
+						ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY]);
+			} else {
+				IJ.error("Internal error: unexpected energy type selected");
+				return;
+			}
+
+			Recorder.recordOption(ALPHA, "" + alpha_);
+			Recorder.recordOption(MAX_ITER, "" + life_);
+			Recorder.recordOption(IMMORTAL, "" + immortalFlag_);
+			Recorder.recordOption(SAVE, "" + saveROI_);
+
+			if (saveROI_)
+				Recorder.saveCommand();
+
+		}
+
 		// ----------------------------------------------------------------------------
-		
-//		ip.setSliceNumber(ip.getSliceNumber()+1);
-		
+
+		// ip.setSliceNumber(ip.getSliceNumber()+1);
+
 		ESnake mysnake = new ESnake((FloatProcessor) ip, std_, life_, M_,
 				alpha_, immortalFlag_, detect_, energyType_, imp_.getRoi());
 		Snake2DKeeper keeper = new Snake2DKeeper();
 
-//		if (IJ.isMacro()) {
-//			keeper.optimize(mysnake, imp_);
-			keeper.optimize(mysnake, null);
-//		} else {
-//			keeper.interactAndOptimize(mysnake, imp_);
-//		}
+		// if (IJ.isMacro()) {
+
+		// keeper.optimize(mysnake, imp_);
+		keeper.optimize(mysnake, null);
+
+		// } else {
+		// keeper.interactAndOptimize(mysnake, imp_);
+		// }
 
 		if (!mysnake.isCanceledByUser()) {
 			if (saveROI_) {
-//				RoiManager roiManager = RoiManager.getInstance();
-//				if (roiManager == null){
-//					roiManager = new RoiManager();
-//				}
+				// RoiManager roiManager = RoiManager.getInstance();
+				// if (roiManager == null){
+				// roiManager = new RoiManager();
+				// }
 				Snake2DScale[] skin = mysnake.getScales();
 				PolygonRoi roi = new PolygonRoi(skin[1], Roi.TRACED_ROI);
-//				if (saveROI_)
-//					roiManager.addRoi(roi);
-				ip.fill(roi);
+				// if (saveROI_)
+				// roiManager.addRoi(roi);
+				ImageProcessor ip2 = ip.duplicate();
+				ip2.fill(roi);
+				dstStack_.addSlice("", ip2);
+				if (firstframe_ == true) {
+					dstPlus_ = new ImagePlus("dstStack_", dstStack_);
+				}else{
+					dstPlus_.setStack(dstStack_);
+				}
+				dstPlus_.show();
 				imp_.setRoi(roi);
 			}
 		}
-		
-		
-		
+
+		firstframe_ = false;
 	}
 
 	// ----------------------------------------------------------------------------
@@ -280,8 +315,8 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	 */
 	@Override
 	public int setup(String arg, ImagePlus imp) {
-
 		imp_ = imp;
+		dstStack_ = new ImageStack(imp_.getWidth(), imp_.getHeight());
 		return (CAPABILITIES);
 	}
 
