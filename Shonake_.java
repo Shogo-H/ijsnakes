@@ -135,10 +135,10 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	private static boolean firstframe_ = true;
 	
 	/** If 0, it is last frame. (made by Shogo HIRAMATSU) */
-	private static int lastframe_ = -1;
+	//private static int lastframe_ = -1;
 
 	// /** Initial contour. (made by Shogo HIRAMATSU) */
-	// private Roi initialContour_ = null;
+	private Roi initialContour_ = null;
 
 	/** Stack for processed images. (made by Shogo HIRAMATSU) */
 	private ImageStack dstStack_ = null;
@@ -277,15 +277,20 @@ public class Shonake_ implements ExtendedPlugInFilter {
 				PolygonRoi roi = new PolygonRoi(skin[1], Roi.TRACED_ROI);
 				// if (saveROI_)
 				// roiManager.addRoi(roi);
-				ImageProcessor ip2 = ip.duplicate();
+				ImageProcessor ip2 = ip.duplicate().convertToByteProcessor();
+				ip2.setValue(255);
 				ip2.fill(roi);
+				imp_.deleteRoi();
 				dstStack_.addSlice("", ip2);
 				if (firstframe_ == true) {
 					dstPlus_ = new ImagePlus("dstStack_", dstStack_);
+					dstPlus_.show();
+					dstPlus_.deleteRoi();
 				}else{
 					dstPlus_.setStack(dstStack_);
+					dstPlus_.deleteRoi();
 				}
-				dstPlus_.show();
+				dstPlus_.updateAndDraw();
 				imp_.setRoi(roi);
 			}
 		}
@@ -316,6 +321,7 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	@Override
 	public int setup(String arg, ImagePlus imp) {
 		imp_ = imp;
+		firstframe_ = true;
 		dstStack_ = new ImageStack(imp_.getWidth(), imp_.getHeight());
 		return (CAPABILITIES);
 	}
