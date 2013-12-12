@@ -19,7 +19,7 @@ import big.ij.snake2D.Snake2DScale;
  * 
  * @author Ricard Delgado-Gonzalo (ricard.delgado@gmail.com)
  */
-class ESnake implements Snake2D {
+class Shonake implements Snake2D {
 
 	/** Snake defining nodes. */
 	private Snake2DNode[] coef_ = null;
@@ -281,7 +281,7 @@ class ESnake implements Snake2D {
 	/**
 	 * Constructor.
 	 */
-	public ESnake(FloatProcessor in, double sigma, int maxLife, int M,
+	public Shonake(FloatProcessor in, double sigma, int maxLife, int M,
 			double alpha, boolean immortal, int detect, int energytype,
 			Roi initialContour) {
 
@@ -646,12 +646,12 @@ class ESnake implements Snake2D {
 		coef_ = new Snake2DNode[M_];
 
 		if (initialContour_ != null) {
-			IJ.log(initialContour_.getTypeAsString() + " Roi detected.");
+//			IJ.log(initialContour_.getTypeAsString() + " Roi detected.");
 			int type = initialContour_.getType();
 			if (type == Roi.RECTANGLE || type == Roi.OVAL
 					|| type == Roi.POLYGON || type == Roi.FREEROI
 					|| type == Roi.TRACED_ROI) {
-				IJ.log("Parsing...");
+//				IJ.log("Parsing...");
 				Polygon p = initialContour_.getPolygon();
 				if (p != null) {
 					Point2D.Double[] resampledContour = arcLengthResampling(p,
@@ -664,7 +664,7 @@ class ESnake implements Snake2D {
 			}
 		}
 
-		IJ.log("Initializing default shape...");
+//		IJ.log("Initializing default shape...");
 		int radius = (int) (Math.min((double) width_ / 6, (double) height_ / 6));
 		int x0 = width_ / 2;
 		int y0 = height_ / 2;
@@ -1615,7 +1615,7 @@ class ESnake implements Snake2D {
 			} else if (minl.getValue() > xPosSkin_[lst(minl)]
 					&& minl.getValue() > xPosSkin_[nxt(minl)]) {
 				// ">"
-				if (yPosSkin_[lst(minl)] < yPosSkin_[nxt(minl)]) {
+				if (yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]) {
 					// from down to up
 					if (Ss.indexOf(minl.getKey()) > 0
 							&& Ss.indexOf(lst(minl)) + 1 < Ss.size()) {
@@ -1624,7 +1624,9 @@ class ESnake implements Snake2D {
 								Ss.get(Ss.indexOf(lst(minl)) + 1)))
 							return true;
 					}
-				} else if (yPosSkin_[lst(minl)] > yPosSkin_[nxt(minl)]) {
+					Ss.remove(Ss.indexOf(lst(minl)));
+					Ss.remove(Ss.indexOf(minl.getKey()));
+				} else if (yPosSkin_[lst(minl)] < yPosSkin_[nxt(minl)]) {
 					// from up to down
 					if (Ss.indexOf(lst(minl)) > 0
 							&& Ss.indexOf(minl.getKey()) + 1 < Ss.size()) {
@@ -1633,10 +1635,9 @@ class ESnake implements Snake2D {
 								Ss.get(Ss.indexOf(minl.getKey()) + 1)))
 							return true;
 					}
+					Ss.remove(Ss.indexOf(minl.getKey()));
+					Ss.remove(Ss.indexOf(lst(minl)));
 				}
-				// pull 2 segments from Ss
-				Ss.remove(Ss.indexOf(lst(minl)));
-				Ss.remove(Ss.indexOf(minl.getKey()));
 			} else if (xPosSkin_[lst(minl)] <= minl.getValue()
 					&& minl.getValue() <= xPosSkin_[nxt(minl)]) {
 				// "->" from left to right
@@ -1679,7 +1680,7 @@ class ESnake implements Snake2D {
 				}
 			} else {
 				// exception process
-				IJ.log("Exception nodes: " + minl.getKey());
+//				IJ.log("Exception nodes: " + minl.getKey());
 			}
 			LsRaw.remove(minl.getKey());// Ls is referring LsRaw
 			Ls.clear();
@@ -1753,7 +1754,7 @@ class ESnake implements Snake2D {
 	// ----------------------------------------------------------------------------
 
 	/**
-	 * minl.getValue()+1 (created by Shogo HIRAMATSU)
+	 * minl.getKey()+1 (created by Shogo HIRAMATSU)
 	 */
 	private int nxt(Map.Entry<Integer, Double> minl) {
 		if (minl.getKey() == MR_ - 1)
@@ -1764,7 +1765,7 @@ class ESnake implements Snake2D {
 	// ----------------------------------------------------------------------------
 
 	/**
-	 * minl.getValue()-1 (created by Shogo HIRAMATSU)
+	 * minl.getKey()-1 (created by Shogo HIRAMATSU)
 	 */
 	private int lst(Map.Entry<Integer, Double> minl) {
 		if (minl.getKey() == 0)
@@ -1802,37 +1803,46 @@ class ESnake implements Snake2D {
 				// "<"
 				if (Ss.isEmpty() == true) {
 					// if Ss is empty
-					if (coef_[lstC(minl)].y > coef_[nxtC(minl)].y) {
+					if (up2down(minl)==0) {
+						// from down to up
 						Ss.add(0, minl.getKey());
 						Ss.add(1, lstC(minl));
-					} else {
+					} else if(up2down(minl)==1) {
+						// from up to down
 						Ss.add(0, lstC(minl));
 						Ss.add(1, minl.getKey());
+					} else if(up2down(minl)==-1){
+						return true;
 					}
 				} else if (coef_[minl.getKey()].y < getYofSonLC(Ss.get(0),
 						minl.getValue())) {
 					// if the node is the top
-					if (coef_[lstC(minl)].y > coef_[nxtC(minl)].y) {
+					if (up2down(minl)==0) {
+						// from down to up
 						Ss.add(0, minl.getKey());
 						Ss.add(1, lstC(minl));
-					} else {
+					} else if(up2down(minl)==1){
+						// from up to down
 						Ss.add(0, lstC(minl));
 						Ss.add(1, minl.getKey());
+					} else if(up2down(minl)==-1){
+						return true;
 					}
 					if (intersectionCheckC(Ss.get(1), Ss.get(2)))
 						return true;
 				} else if (getYofSonLC(Ss.get(Ss.size() - 1), minl.getValue()) < coef_[minl
 						.getKey()].y) {
 					// if the node is in the bottom
-					if (coef_[lstC(minl)].y > coef_[nxtC(minl)].y) {
+					if (up2down(minl)==0) {
+						//from down to up
 						Ss.add(Ss.size(), minl.getKey());
-						Ss.add(Ss.size(), lstC(minl));// Ss.size() is increased
-														// by proceeding line.
-					} else {
+						Ss.add(Ss.size(), lstC(minl));// Ss.size increased already
+					} else if(up2down(minl)==1){
+						//from up to down
 						Ss.add(Ss.size(), lstC(minl));
-						Ss.add(Ss.size(), minl.getKey());// Ss.size() is
-															// increased by
-															// proceeding line.
+						Ss.add(Ss.size(), minl.getKey());// Ss.size increased already
+					} else if(up2down(minl)==-1){
+						return true;
 					}
 					if (intersectionCheckC(Ss.get(Ss.size() - 3),
 							Ss.get(Ss.size() - 2)))
@@ -1844,12 +1854,16 @@ class ESnake implements Snake2D {
 								.getKey()].y
 								&& coef_[minl.getKey()].y < getYofSonL(
 										Ss.get(i + 1), minl.getValue())) {
-							if (coef_[lstC(minl)].y > coef_[nxtC(minl)].y) {
+							if (up2down(minl)==0) {
+								//from down to up
 								Ss.add(i + 1, minl.getKey());
 								Ss.add(i + 2, lstC(minl));
-							} else {
+							} else if(up2down(minl)==1){
+								//from up to down
 								Ss.add(i + 1, lstC(minl));
 								Ss.add(i + 2, minl.getKey());
+							} else if(up2down(minl)==-1){
+								return true;
 							}
 							if (intersectionCheckC(Ss.get(i), Ss.get(i + 1)))
 								return true;
@@ -1864,16 +1878,21 @@ class ESnake implements Snake2D {
 			} else if (minl.getValue() > coef_[lstC(minl)].x
 					&& minl.getValue() > coef_[nxtC(minl)].x) {
 				// ">"
-				if (coef_[lstC(minl)].y < coef_[nxtC(minl)].y) {
+				if (up2down(minl)==0) {
 					// from down to up
 					if (Ss.indexOf(minl.getKey()) > 0
-							&& Ss.indexOf(lst(minl)) + 1 < Ss.size()) {
+							&& Ss.indexOf(lstC(minl)) + 1 < Ss.size()) {
 						if (intersectionCheckC(
 								Ss.get(Ss.indexOf(minl.getKey()) - 1),
 								Ss.get(Ss.indexOf(lstC(minl)) + 1)))
 							return true;
 					}
-				} else if (coef_[lstC(minl)].y > coef_[nxtC(minl)].y) {
+					if (Ss.indexOf(lstC(minl))==-1 || Ss.indexOf(minl.getKey())==-1){
+						return true;
+					}
+					Ss.remove(Ss.indexOf(lstC(minl)));
+					Ss.remove(Ss.indexOf(minl.getKey()));
+				} else if (up2down(minl)==1) {
 					// from up to down
 					if (Ss.indexOf(lstC(minl)) > 0
 							&& Ss.indexOf(minl.getKey()) + 1 < Ss.size()) {
@@ -1882,10 +1901,14 @@ class ESnake implements Snake2D {
 								Ss.get(Ss.indexOf(minl.getKey()) + 1)))
 							return true;
 					}
+					if(Ss.indexOf(minl.getKey())==-1 || Ss.indexOf(lstC(minl))==-1 ){
+						return true;
+					}
+					Ss.remove(Ss.indexOf(minl.getKey()));
+					Ss.remove(Ss.indexOf(lstC(minl)));
+				} else if(up2down(minl)==-1){
+					return true;
 				}
-				// pull 2 segments from Ss
-				Ss.remove(Ss.indexOf(lstC(minl)));
-				Ss.remove(Ss.indexOf(minl.getKey()));
 				LsRaw.remove(minl.getKey());
 			} else if (coef_[lstC(minl)].x < minl.getValue()
 					&& minl.getValue() < coef_[nxtC(minl)].x) {
@@ -1905,7 +1928,7 @@ class ESnake implements Snake2D {
 				if (Ss.indexOf(lstC(minl)) > -1) {
 					Ss.set(Ss.indexOf(lstC(minl)), minl.getKey());
 				} else {
-					IJ.log("Ss.indexOf(lstC(minl)): " + Ss.indexOf(lstC(minl)));
+//					IJ.log("Ss.indexOf(lstC(minl)): " + Ss.indexOf(lstC(minl)));
 					Ss.set(Ss.indexOf(lstC(minl) - 1), minl.getKey());
 				}
 				LsRaw.remove(minl.getKey());
@@ -1927,19 +1950,19 @@ class ESnake implements Snake2D {
 				if (Ss.indexOf(minl.getKey()) > -1) {
 					Ss.set(Ss.indexOf(minl.getKey()), lstC(minl));
 				} else {
-					IJ.log("Ss.indexOf(minl.getKey()): "
-							+ Ss.indexOf(minl.getKey()));
+//					IJ.log("Ss.indexOf(minl.getKey()): "
+//							+ Ss.indexOf(minl.getKey()));
 					Ss.set(Ss.indexOf(minl.getKey() + 1), lstC(minl));
 				}
 				LsRaw.remove(minl.getKey());
 			} else if (minl.getValue() == coef_[nxtC(minl)].x) {
-				//up to down
+				//up to down vertically
 				Ss.remove(Ss.indexOf(lstC(minl)));
 				Ss.remove(Ss.indexOf(nxtC(minl)));
 				LsRaw.remove(minl.getKey());
 				LsRaw.remove(nxtC(minl));
 			} else if (minl.getValue() == coef_[lstC(minl)].x) {
-				//down to up
+				//down to up vertically
 				Ss.add(0, minl.getKey());
 				if(minl.getKey()-2<0){
 					Ss.add(1, minl.getKey()+M_-2);
@@ -1950,7 +1973,7 @@ class ESnake implements Snake2D {
 				LsRaw.remove(lstC(minl));
 			} else {
 				// exception process
-				IJ.log("Exception nodes: " + minl.getKey());
+//				IJ.log("Exception nodes: " + minl.getKey());
 				LsRaw.remove(minl.getKey());
 			}
 			Ls.clear();
@@ -2024,7 +2047,7 @@ class ESnake implements Snake2D {
 	// ----------------------------------------------------------------------------
 
 	/**
-	 * minl.getValue()+1 of control points (created by Shogo HIRAMATSU)
+	 * minl.getKey()+1 of control points (created by Shogo HIRAMATSU)
 	 */
 	private int nxtC(Map.Entry<Integer, Double> minl) {
 		if (minl.getKey() == M_ - 1)
@@ -2035,12 +2058,26 @@ class ESnake implements Snake2D {
 	// ----------------------------------------------------------------------------
 
 	/**
-	 * minl.getValue()-1 of control points (created by Shogo HIRAMATSU)
+	 * minl.getKey()-1 of control points (created by Shogo HIRAMATSU)
 	 */
 	private int lstC(Map.Entry<Integer, Double> minl) {
 		if (minl.getKey() == 0)
 			return M_ - 1;
 		return minl.getKey() - 1;
+	}
+
+	// ----------------------------------------------------------------------------
+	/**
+	 * coef_[lstC(minl)].y > coef_[nxtC(minl)].y (created by Shogo HIRAMATSU)
+	 */
+	private int up2down(Map.Entry<Integer, Double> minl) {
+		if (getYofSonLC(lstC(minl), coef_[lstC(minl)].x) < getYofSonLC(minl.getKey(), coef_[lstC(minl)].x)){
+			return 1;
+		}else if(getYofSonLC(lstC(minl), coef_[lstC(minl)].x) > getYofSonLC(minl.getKey(), coef_[lstC(minl)].x)){
+			return 0;
+		}else{
+			return -1;
+		}
 	}
 
 	// ----------------------------------------------------------------------------
