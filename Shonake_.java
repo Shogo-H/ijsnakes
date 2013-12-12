@@ -8,7 +8,7 @@ import ij.gui.Roi;
 import ij.plugin.filter.ExtendedPlugInFilter;
 import ij.plugin.filter.PlugInFilterRunner;
 import ij.plugin.frame.Recorder;
-import ij.plugin.frame.RoiManager;
+//import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 
@@ -116,11 +116,10 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	private static int std_ = DEFAULT_STD;
 
 	/** Brightness type of the object to segment.(DETECTDARK or DETECTBRIGHT) */
-	private static int detect_ = ESnake.DETECTDARK;
+	private static int detect_ = Shonake.DETECTDARK;
 
 	/** Type of energy used. */
-	// private static int energyType_ = ESnake.CONTOURENERGY;
-	private static int energyType_ = ESnake.REGIONENERGY;
+	private static int energyType_ = Shonake.REGIONENERGY;
 
 	/** Tradeoff energy parameter. */
 	private static double alpha_ = DEFAULT_ALPHA;
@@ -135,10 +134,7 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	private static boolean firstframe_ = true;
 	
 	/** If 0, it is last frame. (made by Shogo HIRAMATSU) */
-	//private static int lastframe_ = -1;
-
-	// /** Initial contour. (made by Shogo HIRAMATSU) */
-	private Roi initialContour_ = null;
+	private static int leftframe_ = -1;
 
 	/** Stack for processed images. (made by Shogo HIRAMATSU) */
 	private ImageStack dstStack_ = null;
@@ -166,11 +162,11 @@ public class Shonake_ implements ExtendedPlugInFilter {
 
 			/** get pop-up-menu's choice in "dialog_" and store */
 			String targetAsString = dialog_.getNextChoice();
-			if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTDARK])) {
-				detect_ = ESnake.DETECTDARK;
+			if (targetAsString.equals(TARGETOPTIONS[Shonake.DETECTDARK])) {
+				detect_ = Shonake.DETECTDARK;
 			} else if (targetAsString
-					.equals(TARGETOPTIONS[ESnake.DETECTBRIGHT])) {
-				detect_ = ESnake.DETECTBRIGHT;
+					.equals(TARGETOPTIONS[Shonake.DETECTBRIGHT])) {
+				detect_ = Shonake.DETECTBRIGHT;
 			} else {
 				IJ.error("Internal error: unexpected brightness detection mode");
 				return;
@@ -183,14 +179,14 @@ public class Shonake_ implements ExtendedPlugInFilter {
 
 			String energytypeAsString = dialog_.getNextChoice();
 			if (energytypeAsString
-					.equals(ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY])) {
-				energyType_ = ESnake.CONTOURENERGY;
+					.equals(ENERGYTYPEOPTIONS[Shonake.CONTOURENERGY])) {
+				energyType_ = Shonake.CONTOURENERGY;
 			} else if (energytypeAsString
-					.equals(ENERGYTYPEOPTIONS[ESnake.REGIONENERGY])) {
-				energyType_ = ESnake.REGIONENERGY;
+					.equals(ENERGYTYPEOPTIONS[Shonake.REGIONENERGY])) {
+				energyType_ = Shonake.REGIONENERGY;
 			} else if (energytypeAsString
-					.equals(ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY])) {
-				energyType_ = ESnake.MIXTUREENERGY;
+					.equals(ENERGYTYPEOPTIONS[Shonake.MIXTUREENERGY])) {
+				energyType_ = Shonake.MIXTUREENERGY;
 			} else {
 				IJ.error("Internal error: unexpected energy type selected");
 				return;
@@ -209,12 +205,12 @@ public class Shonake_ implements ExtendedPlugInFilter {
 			/** for saving ROI */
 			Recorder.setCommand("Shonake ");
 
-			if (targetAsString.equals(TARGETOPTIONS[ESnake.DETECTDARK])) {
-				Recorder.recordOption(TARGET, TARGETOPTIONS[ESnake.DETECTDARK]);
+			if (targetAsString.equals(TARGETOPTIONS[Shonake.DETECTDARK])) {
+				Recorder.recordOption(TARGET, TARGETOPTIONS[Shonake.DETECTDARK]);
 			} else if (targetAsString
-					.equals(TARGETOPTIONS[ESnake.DETECTBRIGHT])) {
+					.equals(TARGETOPTIONS[Shonake.DETECTBRIGHT])) {
 				Recorder.recordOption(TARGET,
-						TARGETOPTIONS[ESnake.DETECTBRIGHT]);
+						TARGETOPTIONS[Shonake.DETECTBRIGHT]);
 			} else {
 				IJ.error("Internal error: unexpected brightness detection mode");
 				return;
@@ -224,17 +220,17 @@ public class Shonake_ implements ExtendedPlugInFilter {
 			Recorder.recordOption(GAUSSIAN_BLUR, "" + std_);
 
 			if (energytypeAsString
-					.equals(ENERGYTYPEOPTIONS[ESnake.REGIONENERGY])) {
+					.equals(ENERGYTYPEOPTIONS[Shonake.REGIONENERGY])) {
 				Recorder.recordOption(ENERGY_TYPE,
-						ENERGYTYPEOPTIONS[ESnake.REGIONENERGY]);
+						ENERGYTYPEOPTIONS[Shonake.REGIONENERGY]);
 			} else if (energytypeAsString
-					.equals(ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY])) {
+					.equals(ENERGYTYPEOPTIONS[Shonake.CONTOURENERGY])) {
 				Recorder.recordOption(ENERGY_TYPE,
-						ENERGYTYPEOPTIONS[ESnake.CONTOURENERGY]);
+						ENERGYTYPEOPTIONS[Shonake.CONTOURENERGY]);
 			} else if (energytypeAsString
-					.equals(ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY])) {
+					.equals(ENERGYTYPEOPTIONS[Shonake.MIXTUREENERGY])) {
 				Recorder.recordOption(ENERGY_TYPE,
-						ENERGYTYPEOPTIONS[ESnake.MIXTUREENERGY]);
+						ENERGYTYPEOPTIONS[Shonake.MIXTUREENERGY]);
 			} else {
 				IJ.error("Internal error: unexpected energy type selected");
 				return;
@@ -252,31 +248,16 @@ public class Shonake_ implements ExtendedPlugInFilter {
 
 		// ----------------------------------------------------------------------------
 
-		// ip.setSliceNumber(ip.getSliceNumber()+1);
-
-		ESnake mysnake = new ESnake((FloatProcessor) ip, std_, life_, M_,
+		Shonake mysnake = new Shonake((FloatProcessor) ip, std_, life_, M_,
 				alpha_, immortalFlag_, detect_, energyType_, imp_.getRoi());
 		Snake2DKeeper keeper = new Snake2DKeeper();
-
-		// if (IJ.isMacro()) {
-
-		// keeper.optimize(mysnake, imp_);
+		
 		keeper.optimize(mysnake, null);
-
-		// } else {
-		// keeper.interactAndOptimize(mysnake, imp_);
-		// }
-
+		
 		if (!mysnake.isCanceledByUser()) {
 			if (saveROI_) {
-				// RoiManager roiManager = RoiManager.getInstance();
-				// if (roiManager == null){
-				// roiManager = new RoiManager();
-				// }
 				Snake2DScale[] skin = mysnake.getScales();
 				PolygonRoi roi = new PolygonRoi(skin[1], Roi.TRACED_ROI);
-				// if (saveROI_)
-				// roiManager.addRoi(roi);
 				ImageProcessor ip2 = ip.duplicate().convertToByteProcessor();
 				ip2.setValue(255);
 				ip2.fill(roi);
@@ -284,7 +265,6 @@ public class Shonake_ implements ExtendedPlugInFilter {
 				dstStack_.addSlice("", ip2);
 				if (firstframe_ == true) {
 					dstPlus_ = new ImagePlus("dstStack_", dstStack_);
-					dstPlus_.show();
 					dstPlus_.deleteRoi();
 				}else{
 					dstPlus_.setStack(dstStack_);
@@ -294,8 +274,12 @@ public class Shonake_ implements ExtendedPlugInFilter {
 				imp_.setRoi(roi);
 			}
 		}
-
+		if(leftframe_==1){
+			IJ.run(dstPlus_, "Red/Green", "");
+			dstPlus_.show();
+		}
 		firstframe_ = false;
+		leftframe_ -= 1;
 	}
 
 	// ----------------------------------------------------------------------------
@@ -322,7 +306,15 @@ public class Shonake_ implements ExtendedPlugInFilter {
 	public int setup(String arg, ImagePlus imp) {
 		imp_ = imp;
 		firstframe_ = true;
+		leftframe_ = imp.getImageStackSize();
 		dstStack_ = new ImageStack(imp_.getWidth(), imp_.getHeight());
+		if (imp.getRoi()==null) {
+			IJ.showMessage("caution",
+					"Please designate initialization ROI.\n" +
+					"This tracking plug-in will start with the ROI."
+					) ;
+			return (DONE);
+		}
 		return (CAPABILITIES);
 	}
 
